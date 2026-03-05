@@ -1,0 +1,35 @@
+<!-- Plugin Configuration File: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <!-- Unique identifier of the plugin. It should be FQN, cannot be changed between the plugin versions. -->
+    <id>org.vmxidea.vmxidea</id>
+
+    <name>VmxIdea</name>
+
+    <vendor url="https://github.com/dand104">dand104</vendor>
+
+    <description><![CDATA[
+        VMware Workstation virtual machines (.vmx) integration into inteliJ platform.
+
+    ]]></description>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <projectConfigurable parentId="tools" instance="org.vmxidea.vmxidea.presentation.settings.VmwareSettingsConfigurable"
+                             id="presentation.settings.VmwareSettingsConfigurable" displayName="VmxIdea"/>
+
+        <notificationGroup id="vmxIDEA" displayType="BALLOON"/>
+
+        <postStartupActivity implementation="org.vmxidea.vmxidea.presentation.lifecycle.VmStartupActivity"/>
+    </extensions>
+
+    <applicationListeners>
+        <listener class="org.vmxidea.vmxidea.presentation.lifecycle.VmProjectCloseListener" topic="com.intellij.openapi.project.ProjectManagerListener"/>
+    </applicationListeners>
+
+    <actions>
+        <group id="vmxIdea" text="VmxIdea Actions" popup="false">
+            <action id="vmxIdea.Toggle" class="org.vmxidea.vmxidea.presentation.actions.ToggleVmAction" text="Start VM" icon="AllIcons.Actions.Execute"/>
+            <add-to-group group-id="RunToolbarMainActionGroup" anchor="last"/>
+        </group>
+    </actions>
+
+</idea-plugin>
