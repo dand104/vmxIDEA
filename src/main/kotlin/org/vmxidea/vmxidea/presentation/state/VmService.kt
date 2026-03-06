@@ -12,15 +12,17 @@ import com.intellij.openapi.project.Project
 import com.intellij.util.concurrency.AppExecutorUtil
 import org.vmxidea.vmxidea.data.cli.VmcliControllerImpl
 import org.vmxidea.vmxidea.data.storage.VmProjectConfigStorage
+import org.vmxidea.vmxidea.model.VmInstance
 import org.vmxidea.vmxidea.model.VmState
 import org.vmxidea.vmxidea.presentation.notifications.VmNotifier
+import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 @Service(Service.Level.PROJECT)
 class VmService(private val project: Project) : Disposable {
     private val controller = VmcliControllerImpl()
-    @Volatile var currentState: VmState = VmState.UNKNOWN
-        private set
+    private val states = ConcurrentHashMap<String, VmState>()
 
     private val executor = AppExecutorUtil.createBoundedScheduledExecutorService("VmxIdea Poller", 1)
 
@@ -28,53 +30,72 @@ class VmService(private val project: Project) : Disposable {
         executor.scheduleWithFixedDelay({ refreshState() }, 0, 5, TimeUnit.SECONDS)
     }
 
-    fun refreshState() {
+    fun getSelectedVm(): VmInstance? {
         val config = VmProjectConfigStorage.getInstance(project).getConfig()
-        if (config.vmxPath.isBlank()) {
-            updateState(VmState.UNKNOWN)
-            return
-        }
-        controller.queryState(config).onSuccess { newState ->
-            updateState(newState)
-        }
+        return config.vms.find { it.id == config.selectedVmId } ?: config.vms.firstOrNull()
     }
 
-    private fun updateState(newState: VmState) {
-        if (currentState != newState) {
-            currentState = newState
-            ApplicationManager.getApplication().invokeLater {
-                ActivityTracker.getInstance().inc()
+    fun getState(vmxPath: String): VmState {
+        return states[vmxPath] ?: VmState.UNKNOWN
+    }
+
+    fun refreshState() {
+        val config = VmProjectConfigStorage.getInstance(project).getConfig()
+        if (config.vms.isEmpty()) return
+
+        controller.getRunningVms(config.vmrunPath).onSuccess { runningPaths ->
+            var changed = false
+            for (vm in config.vms) {
+                if (vm.vmxPath.isBlank()) continue
+                val isRunning = runningPaths.any { it.equals(File(vm.vmxPath).absolutePath, ignoreCase = true) }
+                val newState = if (isRunning) VmState.RUNNING else VmState.STOPPED
+
+                if (states[vm.vmxPath] != newState) {
+                    states[vm.vmxPath] = newState
+                    changed = true
+                }
+            }
+            if (changed) {
+                ApplicationManager.getApplication().invokeLater {
+                    ActivityTracker.getInstance().inc()
+                }
             }
         }
     }
 
-    fun toggleVm() {
-        if (currentState == VmState.RUNNING) stopVm() else startVm()
+    fun toggleVm(instance: VmInstance? = getSelectedVm()) {
+        if (instance == null || instance.vmxPath.isBlank()) return
+        val state = getState(instance.vmxPath)
+        if (state == VmState.RUNNING) stopVm(instance) else startVm(instance)
     }
 
-    private fun startVm() {
+    private fun startVm(instance: VmInstance) {
         val config = VmProjectConfigStorage.getInstance(project).getConfig()
-        updateState(VmState.RUNNING)
-        ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Starting Virtual Machine...", false) {
+        states[instance.vmxPath] = VmState.RUNNING
+
+        ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Starting ${instance.name}...", false) {
             override fun run(indicator: ProgressIndicator) {
-                controller.start(config).onSuccess {
-                    VmNotifier.notifySuccess(project, "VM started successfully")
+                indicator.isIndeterminate = true
+                controller.start(instance, config.vmrunPath).onSuccess {
+                    VmNotifier.notifySuccess(project, "VM '${instance.name}' started successfully")
                 }.onFailure { err ->
-                    VmNotifier.notifyError(project, "Failed to start VM: ${err.message}")
+                    VmNotifier.notifyError(project, "Failed to start '${instance.name}': ${err.message}")
                 }.also { refreshState() }
             }
         })
     }
 
-    private fun stopVm() {
+    private fun stopVm(instance: VmInstance) {
         val config = VmProjectConfigStorage.getInstance(project).getConfig()
-        updateState(VmState.STOPPED)
-        ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Stopping Virtual Machine...", false) {
+        states[instance.vmxPath] = VmState.STOPPED
+
+        ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Stopping ${instance.name}...", false) {
             override fun run(indicator: ProgressIndicator) {
-                controller.stop(config).onSuccess {
-                    VmNotifier.notifySuccess(project, "VM stopped successfully")
+                indicator.isIndeterminate = true
+                controller.stop(instance, config.vmrunPath).onSuccess {
+                    VmNotifier.notifySuccess(project, "VM '${instance.name}' stopped successfully")
                 }.onFailure { err ->
-                    VmNotifier.notifyError(project, "Failed to stop VM: ${err.message}")
+                    VmNotifier.notifyError(project, "Failed to stop '${instance.name}': ${err.message}")
                 }.also { refreshState() }
             }
         })

@@ -10,20 +10,19 @@ import org.vmxidea.vmxidea.presentation.state.VmService
 class VmStartupActivity : ProjectActivity {
     override suspend fun execute(project: Project) {
         val vmService = VmService.getInstance(project)
-
         val config = VmProjectConfigStorage.getInstance(project).getConfig()
-        if (config.autoStartOnProjectOpen && config.vmxPath.isNotBlank()) {
-            vmService.toggleVm()
-        }
+
+        config.vms.filter { it.autoStartOnProjectOpen && it.vmxPath.isNotBlank() }
+            .forEach { vm -> vmService.toggleVm(vm) }
     }
 }
 
 class VmProjectCloseListener : ProjectManagerListener {
     override fun projectClosing(project: Project) {
         val config = VmProjectConfigStorage.getInstance(project).getConfig()
-        if (config.autoStopOnProjectClose && config.vmxPath.isNotBlank()) {
-            val controller = VmcliControllerImpl()
-            controller.stop(config)
-        }
+        val controller = VmcliControllerImpl()
+
+        config.vms.filter { it.autoStopOnProjectClose && it.vmxPath.isNotBlank() }
+            .forEach { vm -> controller.stop(vm, config.vmrunPath) }
     }
 }

@@ -1,6 +1,4 @@
-<!-- Plugin Configuration File: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
-    <!-- Unique identifier of the plugin. It should be FQN, cannot be changed between the plugin versions. -->
     <id>org.vmxidea.vmxidea</id>
 
     <name>VmxIdea</name>
@@ -26,8 +24,11 @@
     </applicationListeners>
 
     <actions>
-        <group id="vmxIdea" text="VmxIdea Actions" popup="false">
-            <action id="vmxIdea.Toggle" class="org.vmxidea.vmxidea.presentation.actions.ToggleVmAction" text="Start VM" icon="AllIcons.Actions.Execute"/>
+        <group id="VmxIdea.ToolbarGroup" text="VmxIdea" popup="false">
+            <action id="VmxIdea.SelectTargetVm" class="org.vmxidea.vmxidea.presentation.actions.TargetVmComboBoxAction" />
+            <action id="VmxIdea.Toggle" class="org.vmxidea.vmxidea.presentation.actions.ToggleVmAction" text="Start VM" icon="AllIcons.Actions.Execute"/>
+
+            <separator/>
             <add-to-group group-id="RunToolbarMainActionGroup" anchor="last"/>
         </group>
     </actions>

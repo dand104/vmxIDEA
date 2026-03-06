@@ -1,11 +1,11 @@
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "2.1.20"
-    id("org.jetbrains.intellij.platform") version "2.10.2"
+    id("org.jetbrains.intellij.platform") version "2.11.0"
 }
 
 group = "org.vmxidea"
-version = "1.0-SNAPSHOT"
+version = "1.1-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -28,7 +28,7 @@ intellijPlatform {
         }
 
         changeNotes = """
-            Initial version
+            Implemented base functionality and multi-VM configurations.
         """.trimIndent()
     }
 }

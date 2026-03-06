@@ -1,10 +1,9 @@
 package org.vmxidea.vmxidea.repository
 
-import org.vmxidea.vmxidea.model.VmConfig
-import org.vmxidea.vmxidea.model.VmState
+import org.vmxidea.vmxidea.model.VmInstance
 
 interface VmController {
-    fun start(config: VmConfig): Result<Unit>
-    fun stop(config: VmConfig): Result<Unit>
-    fun queryState(config: VmConfig): Result<VmState>
+    fun start(instance: VmInstance, vmrunPath: String): Result<Unit>
+    fun stop(instance: VmInstance, vmrunPath: String): Result<Unit>
+    fun getRunningVms(vmrunPath: String): Result<List<String>>
 }
