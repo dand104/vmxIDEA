@@ -1,11 +1,14 @@
 package org.vmxidea.vmxidea.data.cli
 
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.util.concurrency.AppExecutorUtil
 import org.vmxidea.vmxidea.model.VmInstance
 import org.vmxidea.vmxidea.repository.VmController
 import org.vmxidea.vmxidea.utils.VmrunPathResolver
 import java.io.File
+import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 class VmcliControllerImpl : VmController {
     private val log = Logger.getInstance(VmcliControllerImpl::class.java)
@@ -38,14 +41,27 @@ class VmcliControllerImpl : VmController {
                 .redirectErrorStream(true)
                 .start()
 
+            val futureOutput = AppExecutorUtil.getAppExecutorService().submit(Callable {
+                process.inputStream.bufferedReader().use { it.readText() }
+            })
+
             val finished = process.waitFor(30, TimeUnit.SECONDS)
 
             if (!finished) {
                 process.destroyForcibly()
-                return Result.failure(Exception("Timeout: vmrun command took longer than 15 seconds"))
+                futureOutput.cancel(true)
+                return Result.failure(Exception("Timeout: vmrun command took longer than 30 seconds"))
             }
 
-            val output = process.inputStream.bufferedReader().readText()
+            val output = try {
+                futureOutput.get(1, TimeUnit.SECONDS)
+            } catch (e: TimeoutException) {
+                futureOutput.cancel(true)
+                "VM process spawned and stream kept open."
+            } catch (e: Exception) {
+                futureOutput.cancel(true)
+                "Error reading output."
+            }
 
             if (process.exitValue() == 0) {
                 Result.success(output)

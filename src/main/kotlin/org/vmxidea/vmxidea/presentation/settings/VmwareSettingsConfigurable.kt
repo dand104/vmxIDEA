@@ -40,7 +40,7 @@ class VmwareSettingsConfigurable(private val project: Project) : Configurable {
     private var detailPanel: JPanel? = null
     private var isUpdatingUI = false
 
-    override fun getDisplayName() = "VmxIdea"
+    override fun getDisplayName() = "VmxIDEA"
 
     override fun createComponent(): JComponent {
         listModel = CollectionListModel()
@@ -76,7 +76,7 @@ class VmwareSettingsConfigurable(private val project: Project) : Configurable {
             .addLabeledComponent("Import from Library:", inventoryCombo)
             .addSeparator()
             .addLabeledComponent("VM Name:", nameField)
-            .addLabeledComponent("VMX File Path:", pathField)
+            .addLabeledComponent("VMX File:", pathField)
             .addComponentToRightColumn(vmInfoLabel)
             .addSeparator()
             .addComponent(headlessCheckBox)
@@ -92,7 +92,7 @@ class VmwareSettingsConfigurable(private val project: Project) : Configurable {
         val globalSettingsPanel = FormBuilder.createFormBuilder()
             .addSeparator()
             .addLabeledComponent("vmrun Executable:", vmrunPathField)
-            .addTooltip("Leave as 'vmrun' to auto-detect from system by standard VMware installation")
+            .addTooltip("Leave as 'vmrun' to auto-detect from default VMware paths")
             .panel
 
         detailPanel?.add(globalSettingsPanel, BorderLayout.SOUTH)
@@ -115,12 +115,6 @@ class VmwareSettingsConfigurable(private val project: Project) : Configurable {
                 if (foundVm != null) {
                     nameField.text = foundVm.name
                     pathField.text = foundVm.path
-
-                    SwingUtilities.invokeLater {
-                        isUpdatingUI = true
-                        inventoryCombo.selectedIndex = 0
-                        isUpdatingUI = false
-                    }
                 }
             }
         }
@@ -144,6 +138,15 @@ class VmwareSettingsConfigurable(private val project: Project) : Configurable {
             headlessCheckBox.isSelected = selected.startHeadless
             autoStartCheckBox.isSelected = selected.autoStartOnProjectOpen
             autoStopCheckBox.isSelected = selected.autoStopOnProjectClose
+
+            val availableVms = VmInventoryReader.getAvailableVms()
+            val match = availableVms.find { it.path == selected.vmxPath }
+            if (match != null) {
+                inventoryCombo.selectedItem = match.name
+            } else {
+                inventoryCombo.selectedIndex = 0
+            }
+
             updateVmInfoLabel(selected.vmxPath)
         } else {
             nameField.text = ""
@@ -151,6 +154,7 @@ class VmwareSettingsConfigurable(private val project: Project) : Configurable {
             headlessCheckBox.isSelected = false
             autoStartCheckBox.isSelected = false
             autoStopCheckBox.isSelected = false
+            inventoryCombo.selectedIndex = 0
             vmInfoLabel.text = " "
         }
         isUpdatingUI = false

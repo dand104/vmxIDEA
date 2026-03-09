@@ -13,6 +13,6 @@ class OpenVmSettingsAction(text: String = "Configure VMs...") :
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        ShowSettingsUtil.getInstance().showSettingsDialog(project, "VmxIdea")
+        ShowSettingsUtil.getInstance().showSettingsDialog(project, "VmxIDEA")
     }
 }

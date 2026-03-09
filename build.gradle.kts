@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "org.vmxidea"
-version = "1.1-SNAPSHOT"
+version = "1.2-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -24,11 +24,11 @@ dependencies {
 intellijPlatform {
     pluginConfiguration {
         ideaVersion {
-            sinceBuild = "252.25557"
+            sinceBuild = "251.23774"
         }
 
         changeNotes = """
-            Implemented base functionality and multi-VM configurations.
+            Implemented states of VMs, UI fixes.
         """.trimIndent()
     }
 }

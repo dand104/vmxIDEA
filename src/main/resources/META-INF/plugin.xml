@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>org.vmxidea.vmxidea</id>
 
-    <name>VmxIdea</name>
+    <name>VmxIDEA</name>
 
     <vendor url="https://github.com/dand104">dand104</vendor>
 
@@ -10,9 +10,11 @@
 
     ]]></description>
 
+    <depends>com.intellij.modules.platform</depends>
+
     <extensions defaultExtensionNs="com.intellij">
         <projectConfigurable parentId="tools" instance="org.vmxidea.vmxidea.presentation.settings.VmwareSettingsConfigurable"
-                             id="presentation.settings.VmwareSettingsConfigurable" displayName="VmxIdea"/>
+                             id="presentation.settings.VmwareSettingsConfigurable" displayName="VmxIDEA"/>
 
         <notificationGroup id="vmxIDEA" displayType="BALLOON"/>
 
@@ -24,7 +26,7 @@
     </applicationListeners>
 
     <actions>
-        <group id="VmxIdea.ToolbarGroup" text="VmxIdea" popup="false">
+        <group id="VmxIdea.ToolbarGroup" text="VmxIDEA" popup="false">
             <action id="VmxIdea.SelectTargetVm" class="org.vmxidea.vmxidea.presentation.actions.TargetVmComboBoxAction" />
             <action id="VmxIdea.Toggle" class="org.vmxidea.vmxidea.presentation.actions.ToggleVmAction" text="Start VM" icon="AllIcons.Actions.Execute"/>
 

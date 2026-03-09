@@ -1,22 +1,19 @@
 package org.vmxidea.vmxidea.presentation.actions
 
 import com.intellij.icons.AllIcons
-import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.CommonDataKeys
-import com.intellij.openapi.actionSystem.DataContext
-import com.intellij.openapi.actionSystem.DefaultActionGroup
-import com.intellij.openapi.actionSystem.Separator
-import com.intellij.openapi.actionSystem.ex.ComboBoxAction
+import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.project.DumbAware
+import com.intellij.openapi.ui.popup.JBPopup
+import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.openapi.wm.impl.ExpandableComboAction
 import org.vmxidea.vmxidea.data.storage.VmProjectConfigStorage
 import org.vmxidea.vmxidea.model.VmInstance
 import org.vmxidea.vmxidea.model.VmState
 import org.vmxidea.vmxidea.presentation.state.VmService
+import java.awt.Dimension
 import javax.swing.JComponent
 
-class TargetVmComboBoxAction : ComboBoxAction(), DumbAware {
+class TargetVmComboBoxAction : ExpandableComboAction(), DumbAware {
 
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
 
@@ -31,34 +28,40 @@ class TargetVmComboBoxAction : ComboBoxAction(), DumbAware {
         val service = VmService.getInstance(project)
         val selectedVm = service.getSelectedVm()
 
-        e.presentation.icon = AllIcons.General.Web
-
         if (selectedVm != null) {
             val state = service.getState(selectedVm.vmxPath)
             e.presentation.text = selectedVm.name
+
+            e.presentation.icon = AllIcons.General.Web
 
             val statusText = if (state == VmState.RUNNING) "Running" else "Stopped"
             e.presentation.description = "Selected VM: ${selectedVm.name} ($statusText)"
         } else {
             e.presentation.text = "Select VM..."
             e.presentation.description = "No VM configured"
+            e.presentation.icon = AllIcons.General.Web
         }
 
         e.presentation.isEnabledAndVisible = true
     }
 
-    override fun createPopupActionGroup(button: JComponent, dataContext: DataContext): DefaultActionGroup {
+    override fun createCustomComponent(presentation: Presentation, place: String): JComponent {
+        return super.createCustomComponent(presentation, place).apply {
+            maximumSize = Dimension(Int.MAX_VALUE, maximumSize.height)
+        }
+    }
+
+    override fun createPopup(event: AnActionEvent): JBPopup? {
+        val project = event.project ?: return null
         val group = DefaultActionGroup()
-        val project = CommonDataKeys.PROJECT.getData(dataContext) ?: return group
         val config = VmProjectConfigStorage.getInstance(project).getConfig()
         val service = VmService.getInstance(project)
-
-        group.addSeparator("Available Virtual Machines")
 
         if (config.vms.isEmpty()) {
             group.add(object : AnAction("No VMs Configured") {
                 override fun actionPerformed(e: AnActionEvent) {}
                 override fun update(e: AnActionEvent) { e.presentation.isEnabled = false }
+                override fun getActionUpdateThread() = ActionUpdateThread.BGT
             })
         } else {
             config.vms.forEach { vm ->
@@ -69,10 +72,18 @@ class TargetVmComboBoxAction : ComboBoxAction(), DumbAware {
         group.add(Separator.create())
         group.add(OpenVmSettingsAction("Configure VMs..."))
 
-        return group
+        return JBPopupFactory.getInstance()
+            .createActionGroupPopup(
+                null,
+                group,
+                event.dataContext,
+                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
+                true,
+                ActionPlaces.getPopupPlace("VmxIdea.TargetSelection")
+            )
     }
 
-    private class SelectVmAction(private val vm: VmInstance, private val service: VmService) : AnAction() {
+    private class SelectVmAction(private val vm: VmInstance, private val service: VmService) : AnAction(), DumbAware {
 
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
 
@@ -80,10 +91,10 @@ class TargetVmComboBoxAction : ComboBoxAction(), DumbAware {
             e.presentation.text = vm.name
 
             val state = service.getState(vm.vmxPath)
-            if (state == VmState.RUNNING) {
-                e.presentation.icon = AllIcons.Actions.Execute
+            e.presentation.icon = if (state == VmState.RUNNING) {
+                AllIcons.RunConfigurations.TestState.Run
             } else {
-                e.presentation.icon = null
+                AllIcons.Nodes.EmptyNode
             }
         }
 
